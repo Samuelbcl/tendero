@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { Instances, Instance } from '@react-three/drei';
 import type { Category, MeshType, Product } from '../types';
-import { SHELF } from '../config/layout';
+import { KIT, SHELF_SPOTS } from '../config/models';
 
 const CATEGORY_COLORS: Record<Category, string> = {
   'épicerie': '#e0a458',
@@ -94,44 +94,42 @@ function geometryFor(meshType: MeshType): React.ReactElement {
   }
 }
 
-const STACK_COLS = 3;
-const COL_GAP = 0.16;
-const ROW_GAP = 0.24;
-
-/** Positions locales des `qty` unités dans un slot (rangées de 3, empilées). */
-function stackPositions(qty: number): [number, number, number][] {
-  const out: [number, number, number][] = [];
-  for (let i = 0; i < qty; i++) {
-    const col = i % STACK_COLS;
-    const row = Math.floor(i / STACK_COLS);
-    out.push([(col - 1) * COL_GAP, row * ROW_GAP, 0]);
-  }
-  return out;
-}
+/** Demi-hauteur d'une unité par meshType (pour poser la base sur la planche). */
+const UNIT_HALF: Record<MeshType, number> = {
+  box: 0.11,
+  can: 0.08,
+  bottle: 0.13,
+  bag: 0.13,
+};
 
 /**
- * Pile d'unités identiques d'un produit dans un slot, rendue en INSTANCES
- * (1 seul draw call quel que soit le nombre d'unités). cf. CLAUDE.md règle 4.
+ * Produits d'un slot posés sur les VRAIES planches du rayon kit (SHELF_SPOTS),
+ * en INSTANCES (1 draw call, cf. CLAUDE.md règle 4). Le groupe est calé sur
+ * l'origine du frame et scalé comme lui (KIT.shelfScale) → les unités s'alignent
+ * pile sur les planches, sans dépasser (fini les "tours").
+ *
+ * `origin` = origine monde du frame de rayon [x, 0, SHELF.z].
  */
 export function SlotStack({
   product,
   qty,
-  position,
+  origin,
 }: {
   product: Product;
   qty: number;
-  position: [number, number, number];
+  origin: [number, number, number];
 }): React.ReactElement | null {
   if (qty <= 0) return null;
   const tex = productTexture(product);
-  const positions = stackPositions(Math.min(qty, SHELF.maxQtyPerSlot));
+  const half = UNIT_HALF[product.meshType];
+  const spots = SHELF_SPOTS.slice(0, Math.min(qty, SHELF_SPOTS.length));
   return (
-    <group position={position}>
-      <Instances limit={SHELF.maxQtyPerSlot} castShadow receiveShadow>
+    <group position={origin} scale={KIT.shelfScale}>
+      <Instances limit={SHELF_SPOTS.length} castShadow receiveShadow>
         {geometryFor(product.meshType)}
         <meshStandardMaterial map={tex} roughness={0.85} />
-        {positions.map((p, i) => (
-          <Instance key={i} position={p} />
+        {spots.map((s, i) => (
+          <Instance key={i} position={[s.x, s.y + half, s.z]} />
         ))}
       </Instances>
     </group>

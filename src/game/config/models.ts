@@ -14,6 +14,7 @@ export const MODELS = {
   register: '/models/cash-register.glb',
   character: '/models/character-employee.glb',
   shelf: '/models/shelf-boxes.glb',
+  floor: '/models/floor.glb',
   shelfBags: '/models/shelf-bags.glb',
   freezer: '/models/freezer.glb',
   freezerStanding: '/models/freezers-standing.glb',
@@ -48,6 +49,27 @@ export const KIT = {
 
 /** Nœuds "produits" à masquer dans les rayons kit pour obtenir un rayon VIDE. */
 export const SHELF_PRODUCT_NODES = ['carton', 'box', 'bag', 'bottle', 'Group'] as const;
+
+/**
+ * Emplacements NATIFS (repère local du frame shelf-boxes, AVANT scale) où poser
+ * les produits, relevés sur la géométrie du modèle : 2 planches (basse ~Y0.05,
+ * haute ~Y0.43), 3 colonnes en X, 2 profondeurs en Z. `y` = surface de la planche
+ * (SlotStack ajoute la demi-hauteur de l'unité → la base pose sur la planche).
+ * Ordre = basse-avant, basse-arrière, haute-avant, haute-arrière (remplissage lisible).
+ */
+export const SHELF_PLANK_Y = { bottom: 0.05, top: 0.43 } as const;
+export const SHELF_SPOTS: { x: number; z: number; y: number }[] = [
+  { x: 0.204, z: 0.15, y: SHELF_PLANK_Y.bottom },
+  { x: 0.0, z: 0.15, y: SHELF_PLANK_Y.bottom },
+  { x: -0.204, z: 0.15, y: SHELF_PLANK_Y.bottom },
+  { x: 0.204, z: -0.15, y: SHELF_PLANK_Y.bottom },
+  { x: 0.0, z: -0.15, y: SHELF_PLANK_Y.bottom },
+  { x: -0.204, z: -0.15, y: SHELF_PLANK_Y.bottom },
+  { x: -0.175, z: 0.15, y: SHELF_PLANK_Y.top },
+  { x: 0.175, z: 0.15, y: SHELF_PLANK_Y.top },
+  { x: -0.175, z: -0.15, y: SHELF_PLANK_Y.top },
+  { x: 0.175, z: -0.15, y: SHELF_PLANK_Y.top },
+];
 
 // Préchargement (évite le pop-in au premier affichage).
 Object.values(MODELS).forEach((url) => useGLTF.preload(url));

@@ -67,7 +67,7 @@ export function Shelf() {
             />
             <SlotHit id={slot.id} position={[base[0], SHELF.y + 0.05, SHELF.z]} />
             {product && slot.qty > 0 && (
-              <SlotStack product={product} qty={slot.qty} position={base} />
+              <SlotStack product={product} qty={slot.qty} origin={[base[0], 0, SHELF.z]} />
             )}
           </group>
         );
