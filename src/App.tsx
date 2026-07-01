@@ -9,6 +9,7 @@ import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 
 import { Store } from '@/game/scene/Store';
+import { Decor } from '@/game/scene/Decor';
 import { BackRoom } from '@/game/scene/BackRoom';
 import { Shelf } from '@/game/scene/Shelf';
 import { Register } from '@/game/scene/Register';
@@ -28,6 +29,7 @@ export default function App() {
       <Canvas shadows camera={{ position: [0, 1.7, 3], fov: 75 }}>
         <Suspense fallback={null}>
           <Store />
+          <Decor />
           <BackRoom />
           <Shelf />
           <Register />

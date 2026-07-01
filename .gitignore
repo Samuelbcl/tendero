@@ -16,3 +16,14 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# dossiers bruts de kits d'assets (seul public/models/ est utilisé au runtime)
+/kenney_market
+/Models
+/Previews
+# fichiers d'accompagnement des kits extraits à la racine (inutiles au jeu)
+/License.txt
+/Overview.html
+/Preview*.png
+/Sample.png
+/*.url

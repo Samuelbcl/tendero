@@ -1,13 +1,14 @@
 // ============================================================
-//  Shelf — le rayon du MVP : meuble + emplacements (slots).
+//  Shelf — le rayon : meuble = GLB Kenney shelf-boxes VIDÉ de ses produits
+//  (nœuds carton/box masqués) ; les produits posés par le joueur sont rendus
+//  par-dessus en <SlotStack> instancié.
+//  - un frame kit par slot (tuilage continu), aligné sur slotWorldPosition.
+//  - une hit-zone invisible (kind 'slot') par slot, TOUJOURS présente → seule
+//    enregistrée pour le raycast (on vise le slot même rempli).
 //  - registerShelves(makeShelfSlots()) au montage (BRIEF §5.4).
-//  - chaque slot a une "zone de visée" interactable (kind 'slot') TOUJOURS présente
-//    (même vide) → ramassage/pose/prix possibles. Elle seule est enregistrée pour le
-//    raycast (les produits empilés ne le sont pas → on vise le slot même rempli).
-//  - le contenu est rendu en <SlotStack> instancié.
 //
-//  ⚠️ On s'abonne aux `shelves` via sélecteur : re-render seulement quand le rayon
-//  change (pose, prise, prix) — jamais à 60 fps.
+//  ⚠️ Abonnement aux `shelves` via sélecteur : re-render seulement quand le
+//  rayon change (pose/prise/prix), jamais à 60 fps.
 // ============================================================
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
@@ -20,44 +21,9 @@ import {
   slotIndex,
   slotWorldPosition,
 } from '../config/layout';
+import { MODELS, KIT, SHELF_PRODUCT_NODES } from '../config/models';
+import { KitModel } from './KitModel';
 import { SlotStack } from './ProductMesh';
-
-const SHELF_COLOR = '#9aa0a6';
-const WIDTH = SHELF.slotCount * SHELF.slotSpacing + 0.2;
-const DEPTH = 0.5;
-const HEIGHT = 1.6;
-const ZC = SHELF.z - DEPTH / 2; // centre du meuble (face avant alignée sur SHELF.z)
-
-function Furniture() {
-  return (
-    <group>
-      {/* base */}
-      <mesh position={[0, 0.05, ZC]} castShadow receiveShadow>
-        <boxGeometry args={[WIDTH, 0.1, DEPTH]} />
-        <meshStandardMaterial color={SHELF_COLOR} roughness={0.7} metalness={0.1} />
-      </mesh>
-      {/* panneau du fond */}
-      <mesh position={[0, HEIGHT / 2, ZC - DEPTH / 2 + 0.03]} castShadow receiveShadow>
-        <boxGeometry args={[WIDTH, HEIGHT, 0.06]} />
-        <meshStandardMaterial color={SHELF_COLOR} roughness={0.7} metalness={0.1} />
-      </mesh>
-      {/* plateau (les produits posent dessus) */}
-      <mesh position={[0, SHELF.y - 0.1, ZC]} castShadow receiveShadow>
-        <boxGeometry args={[WIDTH, 0.06, DEPTH]} />
-        <meshStandardMaterial color={SHELF_COLOR} roughness={0.7} metalness={0.1} />
-      </mesh>
-      {/* montants */}
-      <mesh position={[-WIDTH / 2, HEIGHT / 2, ZC]} castShadow receiveShadow>
-        <boxGeometry args={[0.06, HEIGHT, DEPTH]} />
-        <meshStandardMaterial color={SHELF_COLOR} roughness={0.7} metalness={0.1} />
-      </mesh>
-      <mesh position={[WIDTH / 2, HEIGHT / 2, ZC]} castShadow receiveShadow>
-        <boxGeometry args={[0.06, HEIGHT, DEPTH]} />
-        <meshStandardMaterial color={SHELF_COLOR} roughness={0.7} metalness={0.1} />
-      </mesh>
-    </group>
-  );
-}
 
 function SlotHit({ id, position }: { id: string; position: [number, number, number] }) {
   const ref = useRef<THREE.Mesh>(null);
@@ -67,8 +33,10 @@ function SlotHit({ id, position }: { id: string; position: [number, number, numb
   }, []);
   return (
     <mesh ref={ref} position={position} userData={{ interactable: true, kind: 'slot', id }}>
-      <boxGeometry args={[SHELF.slotWidth, 0.55, 0.42]} />
-      <meshStandardMaterial transparent opacity={0.07} color="#ffffff" depthWrite={false} />
+      {/* largeur = slotSpacing (pas slotWidth) : les hit-zones se touchent bord à
+          bord → toute la façade continue du rayon est ciblable, pas de zone morte. */}
+      <boxGeometry args={[SHELF.slotSpacing, 0.55, 0.42]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
     </mesh>
   );
 }
@@ -83,13 +51,20 @@ export function Shelf() {
 
   return (
     <group>
-      <Furniture />
       {shelves.map((slot) => {
         const i = slotIndex(slot.id);
         const base = slotWorldPosition(i);
         const product = slot.productId ? productById(slot.productId) : undefined;
         return (
           <group key={slot.id}>
+            {/* meuble kit vidé de ses produits (un frame par slot) */}
+            <KitModel
+              url={MODELS.shelf}
+              scale={KIT.shelfScale}
+              rotationY={KIT.shelfFaceOffset}
+              hide={SHELF_PRODUCT_NODES}
+              position={[base[0], 0, SHELF.z]}
+            />
             <SlotHit id={slot.id} position={[base[0], SHELF.y + 0.05, SHELF.z]} />
             {product && slot.qty > 0 && (
               <SlotStack product={product} qty={slot.qty} position={base} />

@@ -31,6 +31,12 @@ interface GameState {
   backroom: StockBox[]; // cartons en réserve
   shelves: ShelfSlot[]; // emplacements de rayon
   customers: Customer[];
+  /**
+   * IDs des clients — référence STABLE : ne change qu'à l'ajout/retrait, jamais
+   * sur updateCustomer (position). Permet à la scène de s'abonner en O(1) au
+   * montage/démontage des <Customer> sans réagir aux updates de position 60fps.
+   */
+  customerIds: string[];
   heldItem: HeldItem | null; // carton en main
   stats: DailyStats[]; // bilans des journées passées
 
@@ -78,6 +84,7 @@ export const useGame = create<GameState>((set, get) => ({
   backroom: [],
   shelves: [],
   customers: [],
+  customerIds: [],
   heldItem: null,
   stats: [],
 
@@ -149,7 +156,8 @@ export const useGame = create<GameState>((set, get) => ({
   registerShelves: (slots) => set({ shelves: slots }),
 
   // ---------- clients ----------
-  addCustomer: (c) => set((s) => ({ customers: [...s.customers, c] })),
+  addCustomer: (c) =>
+    set((s) => ({ customers: [...s.customers, c], customerIds: [...s.customerIds, c.id] })),
 
   updateCustomer: (id, patch) =>
     set((s) => ({
@@ -157,7 +165,10 @@ export const useGame = create<GameState>((set, get) => ({
     })),
 
   removeCustomer: (id) =>
-    set((s) => ({ customers: s.customers.filter((c) => c.id !== id) })),
+    set((s) => ({
+      customers: s.customers.filter((c) => c.id !== id),
+      customerIds: s.customerIds.filter((cid) => cid !== id),
+    })),
 
   checkout: (customerId) => {
     const customer = get().customers.find((c) => c.id === customerId);
@@ -166,6 +177,7 @@ export const useGame = create<GameState>((set, get) => ({
     set((s) => ({
       cash: s.cash + revenue,
       customers: s.customers.filter((c) => c.id !== customerId),
+      customerIds: s.customerIds.filter((cid) => cid !== customerId),
     }));
   },
 
