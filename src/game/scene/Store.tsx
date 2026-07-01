@@ -6,6 +6,7 @@
 //  Murs : primitives fines (les murs kit sont trop épais à l'échelle métrique) —
 //  recolorés "magasin". Collision joueur = clamp (pas de Rapier en MVP).
 // ============================================================
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useGLTF, Instances, Instance } from '@react-three/drei';
 import { ROOM } from '../config/layout';
@@ -25,11 +26,19 @@ function Wall(props: {
   );
 }
 
-/** Sol = tuiles floor.glb (1×1 m) instanciées sur toute la surface de la pièce. */
+/** Sol = tuiles floor.glb (1×1 m) instanciées sur toute la surface de la pièce.
+ *  NB : dans cette version de drei, useGLTF renvoie le GLTF brut (pas de nodes/
+ *  materials) → on récupère la géométrie/matériau en parcourant la scène. */
 function Floor() {
-  const { nodes, materials } = useGLTF(MODELS.floor);
-  const geometry = (nodes.floor as THREE.Mesh).geometry;
-  const material = materials.colormap as THREE.Material;
+  const { scene } = useGLTF(MODELS.floor);
+  const tile = useMemo(() => {
+    let mesh: THREE.Mesh | undefined;
+    scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!mesh && m.isMesh) mesh = m;
+    });
+    return mesh;
+  }, [scene]);
 
   const tiles: [number, number, number][] = [];
   const half = ROOM.half - 0.5; // tuiles centrées → couvre -half..+half
@@ -37,8 +46,14 @@ function Floor() {
     for (let z = -half; z <= half; z += 1) tiles.push([x, 0, z]);
   }
 
+  if (!tile) return null;
   return (
-    <Instances geometry={geometry} material={material} limit={tiles.length} receiveShadow>
+    <Instances
+      geometry={tile.geometry}
+      material={tile.material as THREE.Material}
+      limit={tiles.length}
+      receiveShadow
+    >
       {tiles.map((p, i) => (
         <Instance key={i} position={p} />
       ))}
